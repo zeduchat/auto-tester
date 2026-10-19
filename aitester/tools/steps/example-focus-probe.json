@@ -1,0 +1,20 @@
+{
+  "viewport": "1280x800",
+  "loadWaitMs": 9000,
+  "actions": [
+    {
+      "label": "open calculator",
+      "eval": "(async()=>{const b=[...document.querySelectorAll('button')].find(x=>x.textContent.includes('Compare Zedu with other platform')); if(!b) return 'button not found'; b.scrollIntoView({block:'center'}); b.focus(); b.click(); await new Promise(r=>setTimeout(r,1200)); const d=document.querySelector('[role=dialog]'); const a=document.activeElement; return {dialogOpen: !!d, activeAfterOpen: a.tagName+' '+(a.textContent||'').trim().slice(0,40), activeInDialog: !!(d&&d.contains(a))};})()"
+    },
+    {
+      "key": "Tab",
+      "keyCode": 9,
+      "times": 4,
+      "probe": "(()=>{const a=document.activeElement, d=document.querySelector('[role=dialog]'); return {el: a.tagName, href: a.getAttribute('href'), text: (a.textContent||a.getAttribute('aria-label')||'').trim().slice(0,40), insideDialog: !!(d&&d.contains(a))};})()"
+    },
+    {
+      "label": "annotate focus",
+      "eval": "(()=>{const a=document.activeElement, r=a.getBoundingClientRect(), d=document.querySelector('[role=dialog]'); const box=document.createElement('div'); box.style.cssText='position:fixed;left:'+(r.left-6)+'px;top:'+(r.top-6)+'px;width:'+(r.width+12)+'px;height:'+(r.height+12)+'px;border:3px solid #F81404;border-radius:6px;z-index:2147483647;pointer-events:none'; const tag=document.createElement('div'); tag.textContent='Keyboard focus after 4x Tab: outside the dialog (ZeduTester annotation)'; const top=(r.bottom+44>innerHeight)?(r.top-36):(r.bottom+10); tag.style.cssText='position:fixed;left:'+Math.max(8,r.left-6)+'px;top:'+top+'px;background:#F81404;color:#fff;font:600 13px/1.4 system-ui;padding:4px 8px;border-radius:4px;z-index:2147483647;pointer-events:none'; document.body.append(box,tag); return {rect:[Math.round(r.left),Math.round(r.top),Math.round(r.width),Math.round(r.height)], inViewport: r.bottom>0&&r.top<innerHeight, insideDialog: !!(d&&d.contains(a))};})()"
+    }
+  ]
+}

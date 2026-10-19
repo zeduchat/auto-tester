@@ -22,3 +22,13 @@ __pycache__/
 /reviews/desktop-prs/
 /reviews/tickets/
 /reviews/posted-batch.json
+
+# Test checkouts, second browser profile and runtime loop state
+/pr-test/
+/chrome-profile-2/
+/reviews/be-prs/
+/reviews/mobile-prs/
+/reviews/in-progress.txt
+/reviews/seen-replies.json
+/reviews/untested.md
+/reviews/test-setup.md
