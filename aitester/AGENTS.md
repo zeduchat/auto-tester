@@ -45,8 +45,9 @@
 - **Post without asking.** Reviews, short "no ticket code changed" comments and
   follow-ups are posted directly; no draft goes to the owner for approval first.
 - When a ticket can only be checked by a human (for example it needs a fresh
-  sign-up), tag `@zedu-hng/reviewers` in the comment and say exactly what to
-  check.
+  sign-up, a group DM, a second account or backend work not on `dev`), tag
+  `@zedu-hng/reviewers` in the comment and say exactly what to check. Do not wait
+  on the owner for such test data; the run report links those PRs instead.
 - **@mention only verified logins.** Take a handle from GitHub data (the PR's
   `.user.login`, or a commit's `.author.login` from the API), never from a git
   author name or display name. A guessed handle can ping a stranger.
@@ -295,6 +296,10 @@ restart, create each loop's timer again. Each loop can have its own interval.
   ideally from a second session). If that cannot be done, the ticket is ❓ Not tested.
 - When testing becomes possible that was not before (signed-in profile, test channel),
   re-review open PRs whose last review was code-only.
+- A request stub that fails to load lets the real request through. #1256's stubbed newsletter
+  test subscribed a placeholder address on the live API because the stub script had a syntax
+  error. Check stub scripts with `node --check`, have the stub set a flag, and make the test
+  refuse to submit unless that flag is set.
 
 ### Tools (`tools/`)
 
