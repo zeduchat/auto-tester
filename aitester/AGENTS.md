@@ -13,11 +13,44 @@
 - Prioritize confirmed, actionable findings. Distinguish must-fix issues from
   optional suggestions; label nonblocking suggestions accordingly.
 - Do not force trivial issues to be fixed or invent findings to fill a review.
-  When no meaningful issue is found, say "No blocking issues found; suitable
-  to merge from this code review." Do not imply unverified tests passed.
-- Identify posted reviews as ZeduTester. Post one comment per reviewed
+  When every ticket was tested and no meaningful issue is found, say "No
+  blocking issues found; suitable to merge from this code review." Never use
+  that sentence, or any other approving wording, for a PR with an untested
+  ticket. Do not imply unverified tests passed.
+- **Untested means no opinion.** If a ticket could not be tested, say so
+  plainly ("Not tested: ZeduTester could not test this ticket and gives no
+  opinion on it"), say why, and say what the human reviewer must check. Do not
+  add code-reading judgements such as "looks correct in code" or "done well",
+  and do not praise or summarize its implementation. The reviewer must not get
+  the sense that ZeduTester looked at it.
+- **No ticket.** If a PR, or a change inside a bundle, has no ticket, tell the
+  reviewer so in the summary line and the table ("No ticket"). An unticketed
+  change can never be ✅, because there are no acceptance criteria to test.
+- **Report, don't fix.** ZeduTester reviews; it does not write fixes or propose fix
+  sessions or PRs, even for bugs it finds outside a PR's scope. Report them as a
+  nonblocking note (location, consequence, suggested fix) and leave the teams to ticket
+  them. A fix from the owner account would be an owner PR that the loop skips, so it would
+  get no independent review.
+- **Large PRs are reviewed in full.** Size alone does not send a PR to a human
+  reviewer: ZeduTester assesses and tests large PRs and bundles like any other,
+  ticket by ticket.
+- Identify posted reviews as ZeduTester. Post one review comment per reviewed
   revision: a new PR or a new head commit gets a new comment, never an edit of
-  an older one. Do not post twice for the same revision.
+  an older one. The one exception is a **follow-up** on the same head, headed
+  `**ZeduTester follow-up** - commit `<sha7>``: always post one when a ticket
+  that was untested or only code-reviewed has now been tested, or when an
+  earlier ZeduTester comment needs correcting. Post it with
+  `bash tools/host_and_post.sh <key> <n> <sha7> followup` (it posts
+  `zedutester-followup.md`). The owner has approved this for every such case.
+- **Post without asking.** Reviews, short "no ticket code changed" comments and
+  follow-ups are posted directly; no draft goes to the owner for approval first.
+- When a ticket can only be checked by a human (for example it needs a fresh
+  sign-up, a group DM, a second account or backend work not on `dev`), tag
+  `@zedu-hng/reviewers` in the comment and say exactly what to check. Do not wait
+  on the owner for such test data; the run report links those PRs instead.
+- **@mention only verified logins.** Take a handle from GitHub data (the PR's
+  `.user.login`, or a commit's `.author.login` from the API), never from a git
+  author name or display name. A guessed handle can ping a stranger.
 - State testing limits briefly. Do not claim browser verification for isolated
   logic reproductions, or passing CI checks that were not verified.
 - Stick to the tickets and the code. Do not comment on PR process state:
@@ -60,7 +93,8 @@
    "Scope and output").
 2. Check size and scope. Above roughly 400 meaningful changed lines, consider
    asking for a logical split when it improves reviewability; size alone is
-   not an automatic blocker. Follow the target app's size and override policy.
+   not a blocker, and large PRs are still reviewed and tested in full. Follow
+   the target app's size and override policy.
 3. Review the changed design: fit to the problem, coupling, cohesion, file
    placement, realistic performance risks, and tests for changed behaviour.
 4. Inspect changed lines for logic, edge cases, null handling, races, error
@@ -88,9 +122,12 @@ description, with roughly one commit per ticket.
   Then review the combined diff for interactions between tickets.
 - Check shared components changed by one ticket against all their callers;
   another ticket's page may depend on the old behaviour.
-- Flag changes that map to no listed ticket, tickets with no matching change,
-  and commit IDs that do not match their ticket, as nonblocking scope notes
-  unless they cause a defect.
+- List every change that maps to no listed ticket as its own "No ticket" row,
+  so the reviewer sees it. Refactors of shared flows (composer, uploads,
+  sending, real-time, auth) with no ticket must be tested end to end, and are
+  reported as "No ticket" rather than ✅. Tickets with no matching change and
+  commit IDs that do not match their ticket are nonblocking scope notes unless
+  they cause a defect.
 - Report every ticket in the per-ticket table described below.
 - Attribute every finding to its ticket and commit (see "Scope and output"),
   so the team knows which contributor's change to fix.
@@ -106,9 +143,12 @@ one, and give each a verdict:
   by reading the diff, with no blocking issue in its commits.
 - ⚠️ **Needs changes**: incomplete, or has a P1/P2 issue. Say what is missing
   and how to fix it.
-- ❓ **Not verified**: could not be tested (missing backend, needs data we
+- ❓ **Not tested**: could not be tested (missing backend, needs data we
   cannot create, platform not available). Say why, and what the human
-  reviewer should check.
+  reviewer should check. Give no opinion: "Done well?" is "Not tested", and
+  there is no code-reading summary (see "Untested means no opinion").
+- **No ticket**: the change has no ticket; say so, and report what testing
+  showed without calling it ready.
 
 Comment layout:
 
@@ -125,8 +165,9 @@ Comment layout:
 5. Nonblocking notes, and the Scope line with testing limits.
 
 A PR can only be called "suitable to merge" as a whole when every ticket is
-✅. Otherwise, tell the reviewer which tickets are ready and that the PR
-cannot merge until the ⚠️ tickets are fixed or split out.
+✅ and nothing is untested or unticketed. Otherwise,
+tell the reviewer which tickets are ready, which were not tested, and that
+the PR cannot merge until the rest are fixed, tested, or split out.
 
 ## Merge decision (zedu-hng/zedu-desktop only)
 
@@ -155,7 +196,7 @@ or merge, and let a reviewer merge. Only a maintainer sets `live`.
 
 ### Hard gates
 
-Check these from GitHub data in code, not from agent output. All must hold:
+Check these from GitHub data in code, not from agent output (`tools/merge_gates.py`). All must hold:
 
 - Every ticket is ✅ and each ✅ was verified by a test or reproduction, not only by reading.
 - The PR head is still the reviewed SHA. Base is `dev`. Not a draft.
@@ -181,9 +222,129 @@ Check these from GitHub data in code, not from agent output. All must hold:
 Go `live` only after at least 30 shadow decisions with no PR where the panel said merge and a
 human then requested changes. To stop auto-merging, set `MERGE_MODE` back to `shadow`.
 
+## Running the review loops
+
+### One loop per repository
+
+Desktop, frontend and backend each have their **own timer, prompt and process**. Never run
+them as one combined check: a slow desktop build or a long bundle review must not hold up
+the others, and each repo is tested differently.
+
+| Loop | Repository | Key | Clone (under `pr-test/`) | Drafts and screenshots | How tickets are tested |
+| --- | --- | --- | --- | --- | --- |
+| Frontend | `zedu-hng/zedu-fe` | `fe` | `zedu-fe`, server worktree `zedu-test` | `reviews/open-prs/<n>/` | Local Next.js server on `localhost:3000` (`dev` + PR), headless Chrome screenshots |
+| Desktop | `zedu-hng/zedu-desktop` | `desktop` | `zedu-desktop`, worktrees `zedu-desktop-pr<n>` | `reviews/desktop-prs/<n>/` | Flutter widget tests and goldens under `test/zedutester/`; also adds the "Merge decision" section |
+| Backend | `zedu-hng/zedu-be` | `be` | `zedu-be` | `reviews/be-prs/<n>/` | Not set up yet. Define its test steps (`go test`, a local API run) from `review-guides/go.md` before starting this loop |
+| Mobile | `zedu-hng/zedu-mobile` | `mobile` | `zedu-mobile` (test branches `zt/<n>` = `dev` + PR) | `reviews/mobile-prs/<n>/` | Debug APK in the Android emulator with Metro, driven by Android CLI (see "Mobile (Android)") |
+
+Timers created with the session scheduler only live as long as the session. After a
+restart, create each loop's timer again. Each loop can have its own interval.
+
+### Each run of a loop
+
+1. `python -I tools/detect.py <key>` lists open PRs as `NEW PR`, `NEW COMMIT`, `ok`,
+   `OWN PR (skip)` or `IN PROGRESS (skip)`, plus new human replies.
+2. Skip PRs opened by the owner account (`OWNER_LOGIN` in `tools/repos.py`); we don't
+   review our own work. Skip PRs listed in `reviews/in-progress.txt`.
+3. Add `<repo> <n>` (e.g. `zedu-desktop 79`) to `reviews/in-progress.txt` while reviewing,
+   and remove it after posting.
+4. Rename an older revision's folder to `<n>-<oldsha7>`, then snapshot the PR with
+   `python -I tools/collect_pr.py <key> <n>`.
+5. Review and test per this file in the main session. Do not hand reviews to subagents or
+   background agents, even for large PRs. Re-check key claims before posting, especially
+   backend routes and fields.
+6. Post with `bash tools/host_and_post.sh <key> <n> <sha7>`. It hosts the screenshots,
+   then re-checks that the PR is open, the head is still `<sha7>` and no ZeduTester review
+   of `<sha7>` exists. If it refuses because the head moved, review the new head.
+7. Replies: report each new human reply to the owner with a two-line summary, what it asks
+   of us or claims was fixed, and a suggested response. Never reply automatically. If it
+   claims a fix but the head has not moved, say so. Add its id to
+   `reviews/seen-replies.json`. The ids are stored as **strings**; comparing them as numbers
+   reports the same reply again.
+8. Untested items: keep `reviews/untested.md` current, one line per open PR ticket that
+   could not be tested: repo, PR, ticket, why, and what the owner must do to unblock it
+   (for example "create a test channel", "allow posting a file in the test channel",
+   "sign up a fresh test account"). Remove a line when the ticket is tested, merged or
+   closed. **Every run reports this list to the owner, even when nothing else changed**,
+   and asks for what is needed (such as a test channel). Never let an untested item go
+   quiet.
+9. Run report to the owner: if nothing needs action, say so in one line (plus the untested
+   list). Otherwise name each item that needs the owner (a reply, a decision, data to
+   create), and say briefly what was posted: PR, link, and the verdict in a few words.
+   **Anything that needs the owner is reposted on every run until it is resolved**, not
+   only on the run that found it: keep it under "Waiting on the owner" in
+   `reviews/untested.md` and remove it only when the owner has acted or it no longer
+   applies (PR merged or closed).
+
+### Review lessons
+
+- Mocked tests hide contract bugs. Check every request path and response field against
+  `zedu-be` source on `dev`, `central-staging` and `release-candidate`. Examples: the
+  channel id is sent as `channels_id`, and DMs are posted to `/dms/channels/:id/threads`.
+  Earlier mocked reviews missed both.
+- Confirm the change a PR describes is actually in its diff. A branch cut from a team
+  fork's `dev` can carry dozens of unrelated commits and none of the described change.
+- When a new head is only an automatic `dev` merge, compare the change since the last
+  review with `dev`'s own diff. If they match, post a short comment that no ticket code
+  changed and earlier verdicts still apply.
+- If an earlier ZeduTester comment was wrong, say so plainly in the next one.
+- Reading a refactor is not testing it. #1156 rewrote the composer's upload flow; a
+  code-only review praised the new structure and opened with "No blocking code issue
+  found", while uploads and voice notes no longer appeared in real time. A human found it
+  in the preview. Changes to the composer, uploads, sending or real-time updates must be
+  exercised end to end in the test channel (send, then watch it appear without a reload,
+  ideally from a second session). If that cannot be done, the ticket is ❓ Not tested.
+- When testing becomes possible that was not before (signed-in profile, test channel),
+  re-review open PRs whose last review was code-only.
+- A request stub that fails to load lets the real request through. #1256's stubbed newsletter
+  test subscribed a placeholder address on the live API because the stub script had a syntax
+  error. Check stub scripts with `node --check`, have the stub set a flag, and make the test
+  refuse to submit unless that flag is set.
+
+### Tools (`tools/`)
+
+| Script | Purpose |
+| --- | --- |
+| `repos.py` | Repo keys, clone and draft folders, owner login |
+| `detect.py <key>` | PRs needing review and new human replies |
+| `collect_pr.py <key> <n>` | Snapshot metadata, checks, comments, files and diff; fetch `refs/review/<n>` |
+| `host_and_post.sh <key> <n> <sha7>` | Host screenshots in `pr-test/auto-tester` (branch `screenshots-local` → `screenshots`), re-check the head, post a new comment |
+| `cdp-shot.mjs <port> <url> <out.png> <steps.json>` | Drive headless Chrome over CDP and screenshot (needs `node --experimental-websocket`); examples in `tools/steps/` |
+| `merge_gates.py <n> <sha7> [flags]` | Desktop hard gates from GitHub data (see "Merge decision") |
+
+### Environment notes
+
+- Everything checked out for testing lives in `pr-test/` (gitignored). Use
+  `git worktree move` to move worktrees, and `git worktree repair` after moving a clone.
+- Never link `node_modules` into another worktree with an NTFS junction:
+  `git worktree remove` follows the junction and deletes the target's packages.
+- Don't make ordinary commits in `pr-test/zedu-test`. The repo's pre-commit hook runs a full
+  `next build`, which jams the dev server. For a local test merge use `--no-verify`, or
+  check out the PR head directly.
+- If the dev server returns 500, or after moving the folder: stop it, delete `.next`, run
+  `CI=true pnpm install --frozen-lockfile --prefer-offline`, then `pnpm dev`.
+- The local test server talks to the live API, so anything a test sends is real. Post
+  messages, files and voice notes, and create channels, only in the owner's test workspace
+  and channels recorded in `reviews/test-setup.md`, with the network intercepted
+  everywhere else. If a test needs data that does not exist yet and cannot be created
+  there, ask the owner for it in the run report.
+- Never confirm a destructive action against the live API (Leave organisation, delete
+  account, delete channel or message outside the test channels, remove member). Open the
+  dialog to test it, then cancel, and say in the comment that it was cancelled, not
+  confirmed.
+- Headless Chrome for signed-in pages uses a profile the owner has signed in to once. The
+  reviewer never types credentials, even when they are given in chat: open the profile in
+  a visible Chrome window and let the owner sign in. A second account for multi-user tests
+  uses `chrome-profile-2/` and port 9335. A profile can be used by only one Chrome at a time, so
+  use a separate profile and port for signed-out public pages.
+- Flutter goldens fail on tiny pixel differences from message timestamps; re-render with
+  `--update-goldens`. Older ZeduTester goldens from a previous head are expected to differ.
+- `python -I` ignores `PYTHONIOENCODING`. Call `sys.stdout.reconfigure(encoding="utf-8")`
+  in the script instead.
+
 ## UI testing and screenshots
 
-- Test against the local server in `zedu-test/` (a worktree of `dev` with the
+- Test against the local server in `pr-test/zedu-test/` (a worktree of `dev` with the
   PR merged; `.env.local` uses the public URLs from the preview bundle). Say
   in the comment which build was tested, e.g. "`dev` (`2dd60dd`) + this PR".
 - Capture screenshots to a PNG file with headless Chrome, for example
@@ -191,12 +352,12 @@ human then requested changes. To stop auto-merging, set `MERGE_MODE` back to `sh
   --screenshot=<file>.png <url>`. Pages behind sign-in need a Chrome profile
   (`--user-data-dir`) that the user has signed in to once.
 - Host images in `zeduchat/auto-tester` on the `screenshots` branch under
-  `screenshots/zedu-fe/<pr>/<sha7>-<what>.png`, and embed the
-  `raw.githubusercontent.com` URL in the comment. Name what the screenshot
+  `screenshots/<repo>/<pr>/<sha7>-<what>.png` (`tools/host_and_post.sh` does this), and
+  embed the `raw.githubusercontent.com` URL in the comment. Name what the screenshot
   shows in one line under it, including the viewport size.
 - Review every screenshot before posting: test accounts only, with no emails,
   tokens or other personal data visible.
-- Desktop (`zedu-desktop/`): Flutter SDK at `C:\Users\marke\flutter`. Run
+- Desktop (`pr-test/zedu-desktop/`): Flutter SDK at `C:\Users\marke\flutter`. Run
   `flutter pub get`, `flutter analyze` and `flutter test`; build with
   `flutter build windows --debug`. CMake otherwise picks the VS 2026 Build
   Tools instance, which lacks ATL (`atlstr.h`). After deleting
@@ -205,7 +366,7 @@ human then requested changes. To stop auto-merging, set `MERGE_MODE` back to `sh
   -DCMAKE_GENERATOR_INSTANCE="C:/Program Files/Microsoft Visual
   Studio/18/Community" -DFLUTTER_TARGET_PLATFORM=windows-x64`. If `pub get`
   leaves empty package folders in the pub cache, delete them and re-run it.
-- Desktop tickets are tested in a throwaway worktree (`zedu-desktop-test/`,
+- Desktop tickets are tested in a throwaway worktree (`pr-test/zedu-desktop-pr<n>/`,
   `dev` + PR). Put verification tests under `test/zedutester/` there, never in
   the PR. Pump the real widgets, drive them (mouse hover, tap, keys), and
   render screenshots with `matchesGoldenFile` and `--update-goldens`. Load
@@ -213,6 +374,53 @@ human then requested changes. To stop auto-merging, set `MERGE_MODE` back to `sh
   in `setUpAll`. Text with no font family renders as placeholder blocks in
   `flutter test`; say so in the caption and assert that text with
   `find.text` instead.
+
+## Mobile (Android)
+
+- Clone: `pr-test/zedu-mobile` (React Native 0.83, npm). `.env` is the CI file
+  `zedu-hng/zedu-ci:build/zedu-mobile.env` with `{{backend}}` = `api.zedu.chat` and
+  `{{client}}` = `zedu.chat`; never commit or print it. `android/local.properties` points
+  at the SDK.
+- Tools: Android CLI at `%USERPROFILE%\AppData\AndroidCLI\android.exe` (pass
+  `--no-metrics`), SDK at `%LOCALAPPDATA%\Android\Sdk`, JDK 17 at
+  `C:\Users\marke\.jdks\jdk-17.0.20.1+1`. JDK 21 breaks the build: the React Native
+  Gradle plugin's foojay 0.5.0 fails on Gradle 9 when it has to fetch a JDK 17.
+- Emulator: Android CLI's `emulator` commands are disabled on Windows, so use the SDK's
+  `emulator -avd zedu_api36 -no-snapshot-save -no-boot-anim` (Pixel 7, API 36, WHPX),
+  then `adb reverse tcp:8081 tcp:8081`.
+- Build: in `android/`, `gradlew.bat app:assembleDebug -PreactNativeArchitectures=x86_64
+  --max-workers=3 -Pkotlin.compiler.execution.strategy=in-process` with `JAVA_HOME` on
+  JDK 17. A clean build takes about 17 minutes. The machine runs short of commit memory,
+  so stop the emulator during a full native build. Install and launch with
+  `android run --apks=android/app/build/outputs/apk/debug/app-debug.apk`.
+- JS-only PRs need no rebuild: check out `zt/<n>` (`dev` merged with the PR, merged
+  with `--no-verify`) in the clone, keep Metro (`npx react-native start`) running, and
+  reload the app. Rebuild the APK only when a PR changes `android/`, `package.json`,
+  `patches/` or native modules.
+- Drive the app with `android layout --flat` (elements with their centre) plus
+  `adb shell input tap/text/swipe`, and capture with `android screen capture --output`.
+  Crop screenshots to the relevant area.
+- Sign-in: the owner signs in to the test account in the emulator window once, and the
+  session persists in the app's data. Never `pm clear` or uninstall the app without
+  asking, because that signs it out.
+- Signed-out screens (welcome, sign in, sign up, forgot password) are tested in a second
+  Android user, `zt-signedout` (id 10, lock screen disabled): `am switch-user 10`,
+  `am start --user 10 -n net.emerj.zedu/.MainActivity`, then `am switch-user 0` to return.
+  Never sign the owner's user out to test them.
+- The local `.env` adds a placeholder `GOOGLE_CLIENT_ID` (the CI file leaves it unset, and
+  `GoogleSignin.configure` then throws and blanks the app when Login opens). Restart Metro
+  with `--reset-cache` after changing `.env`. To test a PR about that crash, use the CI file
+  without the placeholder.
+- Message action sheets that open via `InteractionManager.runAfterInteractions` never open
+  in the debug build. `tools/mobile_harness.sh` swaps that for `setTimeout` locally (not in
+  the PR under review; say so in the comment). `tools/mobile_switch.sh` drops it again.
+- The AVD has `hw.keyboard=no`, so Gboard shows a real keyboard. Never put the keyboard in
+  a screenshot: its clipboard strip shows the host's clipboard.
+- `tools/mobile_switch.sh <n>` merges the PR onto `dev`; if that conflicts, it tests the PR
+  head instead and says so. A native PR (Gradle, `android/`, new native modules) gets its
+  own worktree `pr-test/zedu-mobile-pr<n>` with its own `npm ci` and build. Stop the main
+  Metro and serve from that worktree while testing it, then switch back and reinstall
+  `pr-test/zedu-mobile-dev-debug.apk`.
 
 ## Language-specific guides
 
@@ -222,6 +430,7 @@ checks relevant to the changed code:
 | Repository | Stack | Guide |
 | --- | --- | --- |
 | `zedu-hng/zedu-fe` | Next.js / React / TypeScript | "React review guidance" below |
+| `zedu-hng/zedu-mobile` | React Native / TypeScript | "React review guidance" below, plus the repo's own `AGENTS.md` conventions |
 | `zedu-hng/zedu-desktop` | Flutter / Dart (Riverpod, GoRouter, Dio) | [`review-guides/dart-flutter.md`](review-guides/dart-flutter.md) |
 | `zedu-hng/zedu-be` | Go (Gin, GORM, Postgres) | [`review-guides/go.md`](review-guides/go.md) |
 
